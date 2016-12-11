@@ -1,0 +1,12 @@
+
+000
+FXUS61 KBOX 102345
+AFDBOX
+
+Area Forecast Discussion
+National Weather Service Taunton MA
+645 PM EST Sat Dec 10 2016
+
+.SYNOPSIS...
+Dry but unseasonably cold weather continues into Sunday afternoon. Low pressure and its attending warm front will bring accumulating snow to much of the region Sunday night into early Monday morning, which will likely change to rain across much of the area Monday morning, except mainly all snow for northwest Massachusetts. A brief period of snow is possible late Wednesday or Wednesday night in advance of a surge of arctic air invading southern New England Thursday and Friday. Another storm system may bring snow and mixed precip next Saturday.
+
