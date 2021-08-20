@@ -10,7 +10,7 @@ I had the following things that I either installed already or downloaded on a Ub
 -ImageMagick (command line utility already part of Ubunutu distro)
 -CUPS (common unix printing system... may have already been part of Ubunutu distro)
 
-Installing CUPS and the DYMO label printer drivers
+Installing CUPS and the DYMO label printer drivers  
 sudo apt-get update
 sudo apt-get install cups cups-client printer-driver-dymo
 
