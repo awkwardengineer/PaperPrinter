@@ -11,7 +11,7 @@ I had the following things that I either installed already or downloaded on a Ub
 -CUPS (common unix printing system... may have already been part of Ubunutu distro)
 
 Installing CUPS and the DYMO label printer drivers  
-sudo apt-get update
+sudo apt-get update  
 sudo apt-get install cups cups-client printer-driver-dymo
 
 
