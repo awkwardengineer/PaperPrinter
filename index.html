@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Checkerboard</title>
+  <style>
+    :root {
+      --black: #000;
+      --white: #fff;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      justify-items: start;
+      align-items: start;
+      background: #fff;
+      font-family: sans-serif;
+    }
+
+    .print-area {
+      width: 272px;
+      overflow: clip;
+    }
+
+    .board {
+      width: 272px;
+    }
+
+    .row {
+      width: 272px;
+      display: flex;
+    }
+
+    .cell {
+      border: 0;
+      flex: 0 0 auto;
+    }
+
+    .small .cell {
+      width: 48px;
+      height: 48px;
+    }
+
+    .large .cell {
+      width: 96px;
+      height: 96px;
+    }
+
+    .black {
+      background: var(--black);
+    }
+
+    .white {
+      background: var(--white);
+    }
+  </style>
+</head>
+<body>
+  <div class="print-area">
+    <div class="board" aria-label="checkerboard pattern">
+      <div class="row small">
+        <div class="cell black"></div><div class="cell white"></div><div class="cell black"></div><div class="cell white"></div><div class="cell black"></div><div class="cell white"></div>
+      </div>
+      <div class="row small">
+        <div class="cell white"></div><div class="cell black"></div><div class="cell white"></div><div class="cell black"></div><div class="cell white"></div><div class="cell black"></div>
+      </div>
+      <div class="row small">
+        <div class="cell black"></div><div class="cell white"></div><div class="cell black"></div><div class="cell white"></div><div class="cell black"></div><div class="cell white"></div>
+      </div>
+      <div class="row small">
+        <div class="cell white"></div><div class="cell black"></div><div class="cell white"></div><div class="cell black"></div><div class="cell white"></div><div class="cell black"></div>
+      </div>
+
+      <div class="row large">
+        <div class="cell black"></div><div class="cell white"></div><div class="cell black"></div>
+      </div>
+      <div class="row large">
+        <div class="cell white"></div><div class="cell black"></div><div class="cell white"></div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
