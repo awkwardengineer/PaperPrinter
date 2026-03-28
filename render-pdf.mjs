@@ -1,12 +1,16 @@
+import { spawnSync } from "node:child_process";
 import puppeteer from "puppeteer-core";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { pathToFileURL } from "node:url";
+import process from "node:process";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const htmlPath = path.join(__dirname, "index.html");
 const outPath = path.join(__dirname, "index.pdf");
+
+/** e.g. http://127.0.0.1:5500/index.html — Live Server must be running */
+const paperHtmlUrlBase = (process.env.PAPER_HTML_URL || "").trim();
 
 /** CSS px per inch (print / DIP convention you asked for). */
 const PX_PER_IN = 96;
@@ -17,14 +21,36 @@ const PX_PER_IN = 96;
  */
 const PAGE_WIDTH = "78.74mm";
 
+/** Same geometry as `page.pdf()` → `lp -o media=Custom.WxH` (PostScript points, 72 pt = 1 in). */
+function customMediaFromPageSize(widthCss, heightPx, pxPerIn) {
+  const mm = Number(String(widthCss).replace(/mm\s*$/i, "").trim());
+  const widthPt = (mm / 25.4) * 72;
+  const heightPt = (heightPx / pxPerIn) * 72;
+  const f = (n) => (Math.round(n * 100) / 100).toFixed(2);
+  return `Custom.${f(widthPt)}x${f(heightPt)}`;
+}
+
+const wantPrint = process.argv.includes("--print");
+const cupsDest = (process.env.CUPS_DEST || "LabelWriter-4XL").trim();
+
 const browser = await puppeteer.launch({
   executablePath: "/usr/bin/google-chrome",
   headless: "new",
   args: ["--no-sandbox"],
 });
 
+function buildPageLoadUrl() {
+  if (paperHtmlUrlBase) return paperHtmlUrlBase;
+  return pathToFileURL(htmlPath).href;
+}
+
+const loadUrl = buildPageLoadUrl();
+console.log("Open:", loadUrl);
+
 const page = await browser.newPage();
-await page.goto(pathToFileURL(htmlPath).href, { waitUntil: "networkidle0" });
+await page.goto(loadUrl, {
+  waitUntil: "networkidle0",
+});
 await page.emulateMediaType("print");
 
 const heightPx = await page.evaluate(() => {
@@ -54,3 +80,16 @@ await page.pdf({
 
 await browser.close();
 console.log(`Wrote ${outPath}`);
+
+const media = customMediaFromPageSize(PAGE_WIDTH, heightPx, PX_PER_IN);
+console.log(`CUPS media (match PDF): ${media}`);
+
+if (wantPrint) {
+  const r = spawnSync(
+    "lp",
+    ["-d", cupsDest, "-o", `media=${media}`, outPath],
+    { stdio: "inherit" },
+  );
+  if (r.error) throw r.error;
+  if (r.status !== 0) process.exit(r.status ?? 1);
+}

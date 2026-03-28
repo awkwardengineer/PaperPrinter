@@ -3,11 +3,41 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Checkerboard</title>
+  <title>Weather — 02145</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800&display=swap"
+    rel="stylesheet"
+  />
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/weather-icons/2.0.10/css/weather-icons.min.css"
+    crossorigin="anonymous"
+  />
   <style>
     :root {
-      --black: #000;
-      --white: #fff;
+      --paper: #fff;
+      /* Print-first greys: same steps as on screen, shifted darker for thermal */
+      --z-hero: #141414;
+      --z-strong: #3a3a3a;
+      --z-body: #454545;
+      --z-muted: #525252;
+      --z-quiet: #656565;
+      --z-faint: #767676;
+      --rule-soft: #b8b8b8;
+      --rule-mid: #8a8a8a;
+      /* Rhythm: multiples of 4px only */
+      --s1: 4px;
+      --s2: 8px;
+      --s3: 12px;
+      --s4: 16px;
+      /* Shared column grid (current + forecast rows) */
+      --col-icon: 22px;
+      --col-day: 34px;
+      --col-temps: 52px;
+      --gutter-x: 6px;
+      --gutter-y: 4px;
     }
 
     * {
@@ -20,71 +50,651 @@
       display: grid;
       justify-items: start;
       align-items: start;
-      background: #fff;
-      font-family: sans-serif;
+      background: var(--paper);
+      color: var(--z-body);
+      font-family:
+        "Inter",
+        -apple-system,
+        BlinkMacSystemFont,
+        "SF Pro Text",
+        "SF Pro Display",
+        "Helvetica Neue",
+        Helvetica,
+        system-ui,
+        sans-serif;
+      font-optical-sizing: auto;
+      font-feature-settings:
+        "cv02" 1,
+        "cv03" 1,
+        "cv04" 1,
+        "cv11" 1;
+      font-size: 12px;
+      line-height: 1.4;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
     }
 
     .print-area {
       width: 272px;
       overflow: clip;
+      padding: 0;
+      margin: 0;
+      border: none;
     }
 
-    .board {
-      width: 272px;
+    .card-head {
+      padding-bottom: var(--s3);
+      margin-bottom: 0;
+      border-bottom: 1px solid var(--rule-soft);
     }
 
-    .row {
-      width: 272px;
+    .location {
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--z-muted);
+      line-height: 1.25;
+    }
+
+    .today-date {
+      margin-top: var(--s1);
+      font-size: 12px;
+      font-weight: 400;
+      font-variant-numeric: tabular-nums;
+      color: var(--z-quiet);
+      letter-spacing: 0.02em;
+    }
+
+    .forecast-grid {
+      display: grid;
+      grid-template-columns:
+        var(--col-icon) var(--col-day) minmax(0, 1fr) var(--col-temps);
+      column-gap: var(--gutter-x);
+      row-gap: var(--gutter-y);
+    }
+
+    .current.forecast-grid {
+      margin-top: var(--s3);
+      margin-bottom: 0;
+      padding: var(--s4) 0;
+      align-items: center;
+      /* Single column of rows: avoid stacking row-gap + hi-lo padding */
+      row-gap: 0;
+    }
+
+    .current-main {
+      grid-column: 1 / -1;
+      grid-row: 1;
+      min-width: 0;
+      align-self: center;
       display: flex;
+      justify-content: center;
     }
 
-    .cell {
-      border: 0;
-      flex: 0 0 auto;
+    .current-top {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: var(--s2);
     }
 
-    .small .cell {
-      width: 48px;
-      height: 48px;
+    .temp-now {
+      flex-shrink: 0;
+      font-size: 30px;
+      font-weight: 500;
+      letter-spacing: -0.03em;
+      line-height: 1;
+      color: var(--z-hero);
+      font-variation-settings: "opsz" 28;
     }
 
-    .large .cell {
-      width: 96px;
-      height: 96px;
+    .temp-now .deg {
+      display: inline-block;
+      margin-left: 2px;
+      font-size: 13px;
+      font-weight: 400;
+      letter-spacing: 0.02em;
+      color: var(--z-muted);
+      vertical-align: super;
+      position: relative;
+      top: 0.08em;
+      font-variation-settings: "opsz" 14;
     }
 
-    .black {
-      background: var(--black);
+    .current .condition-row {
+      display: flex;
+      align-items: center;
+      gap: var(--s2);
+      min-width: 0;
+      flex: 0 1 auto;
     }
 
-    .white {
-      background: var(--white);
+    .current .condition-row .wi {
+      flex-shrink: 0;
+      font-size: 26px;
+      line-height: 1;
+      color: var(--z-body);
+    }
+
+    .current .condition-row .condition {
+      min-width: 0;
+      font-size: 15px;
+      font-weight: 400;
+      color: var(--z-body);
+      letter-spacing: 0;
+      line-height: 1.25;
+    }
+
+    .current.forecast-grid > .hi-lo {
+      grid-column: 1 / -1;
+      grid-row: 2;
+      align-self: start;
+      text-align: center;
+      padding-top: var(--s1);
+    }
+
+    .hi-lo {
+      font-size: 10px;
+      font-weight: 400;
+      color: var(--z-muted);
+      line-height: 1.35;
+      padding-top: 0;
+      margin: 0;
+      border: none;
+    }
+
+    .hi-lo .hi-lo-label {
+      color: var(--z-quiet);
+      font-weight: 400;
+    }
+
+    .hi-lo .hi-lo-val {
+      color: var(--z-strong);
+      font-weight: 500;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .hi-lo .hi-lo-sep {
+      color: var(--z-quiet);
+      margin: 0 0.4em;
+      font-weight: 400;
+    }
+
+    .forecast-title {
+      font-size: 9px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--z-quiet);
+      border-top: 1px solid var(--rule-soft);
+      padding-top: var(--s3);
+      margin-bottom: var(--s2);
+    }
+
+    .day-row {
+      align-items: center;
+      padding: var(--s2) 0;
+      border-bottom: 1px solid var(--rule-soft);
+      font-size: 11px;
+    }
+
+    .day-row .wi {
+      font-size: 16px;
+      line-height: 1;
+      color: var(--z-muted);
+      text-align: center;
+    }
+
+    .day-row:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .day-name {
+      font-weight: 500;
+      font-size: 10px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--z-body);
+    }
+
+    .day-sky {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--z-muted);
+      font-weight: 400;
+      font-size: 10px;
+    }
+
+    .day-temps {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      font-weight: 400;
+      font-size: 11px;
+      color: var(--z-quiet);
+    }
+
+    .day-temps .day-hi {
+      color: var(--z-strong);
+      font-weight: 500;
+    }
+
+    .day-temps .day-lo {
+      color: var(--z-muted);
+      font-weight: 400;
+    }
+
+    .day-temps .day-slash {
+      color: var(--z-quiet);
+      font-weight: 400;
+      margin: 0 0.15em;
+    }
+
+    .status {
+      font-size: 11px;
+      padding: var(--s2) 0;
+      color: var(--z-muted);
+      font-weight: 400;
+    }
+
+    .error {
+      font-weight: 500;
+      color: var(--z-strong);
+    }
+
+    .comic-block {
+      margin: var(--s3) 0 0;
+      padding: 0;
+      border: none;
+    }
+
+    .comic-title {
+      font-size: 9px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--z-quiet);
+      margin: 0 0 var(--s1);
+    }
+
+    .comic-stage {
+      width: 100%;
+      /* height set in JS from image + full-width fit */
+      position: relative;
+      overflow: visible;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .comic-stage img.comic-img {
+      display: block;
+      flex-shrink: 0;
+      max-width: none;
+    }
+
+    .comic-fallback {
+      font-size: 10px;
+      color: var(--z-muted);
+      line-height: 1.45;
+    }
+
+    .comic-fallback a {
+      color: var(--z-strong);
+      font-weight: 500;
     }
   </style>
 </head>
 <body>
-  <div class="print-area">
-    <div class="board" aria-label="checkerboard pattern">
-      <div class="row small">
-        <div class="cell black"></div><div class="cell white"></div><div class="cell black"></div><div class="cell white"></div><div class="cell black"></div><div class="cell white"></div>
-      </div>
-      <div class="row small">
-        <div class="cell white"></div><div class="cell black"></div><div class="cell white"></div><div class="cell black"></div><div class="cell white"></div><div class="cell black"></div>
-      </div>
-      <div class="row small">
-        <div class="cell black"></div><div class="cell white"></div><div class="cell black"></div><div class="cell white"></div><div class="cell black"></div><div class="cell white"></div>
-      </div>
-      <div class="row small">
-        <div class="cell white"></div><div class="cell black"></div><div class="cell white"></div><div class="cell black"></div><div class="cell white"></div><div class="cell black"></div>
-      </div>
-
-      <div class="row large">
-        <div class="cell black"></div><div class="cell white"></div><div class="cell black"></div>
-      </div>
-      <div class="row large">
-        <div class="cell white"></div><div class="cell black"></div><div class="cell white"></div>
-      </div>
-    </div>
+  <div class="print-area" id="root">
+    <div class="status" id="status">Loading weather…</div>
   </div>
+
+  <script>
+    const ZIP = "02145";
+    const COUNTRY = "United States";
+
+    /**
+     * Optional override: full URL to a strip image (?comic= also works).
+     * Default is the Watterson mirror (same calendar month/day, year − 40).
+     */
+    const CALVIN_HOBBES_IMAGE_URL = "";
+
+    /** Last resort if the archive URL fails (e.g. offline build). */
+    const COMIC_LOCAL_FALLBACK = "comic.jpg";
+
+    /** [positron11/watterson](https://positron11.github.io/watterson/) — Dec 1985–Dec 1995. */
+    const WATTERSON_COMIC_BASE =
+      "https://positron11.github.io/watterson/Comic/";
+
+    /** Same month/day as the forecast “today”, strip year minus this (e.g. 2026-03-27 → 1986-03-27). */
+    const COMIC_ARCHIVE_YEAR_OFFSET = 40;
+
+    function comicImageUrlFromPage() {
+      try {
+        const q = new URLSearchParams(window.location.search);
+        const u = q.get("comic") || q.get("comicImg");
+        return u && u.trim() ? u.trim() : "";
+      } catch (_) {
+        return "";
+      }
+    }
+
+    function parseIsoDateParts(iso) {
+      const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || "");
+      if (!m) return null;
+      return { y: m[1], mo: m[2], d: m[3] };
+    }
+
+    /** @returns {string} e.g. …/Comic/19860327.gif */
+    function wattersonStripGifUrl(iso) {
+      const p = parseIsoDateParts(iso);
+      if (!p) return "";
+      const y = Number(p.y) - COMIC_ARCHIVE_YEAR_OFFSET;
+      const ys = String(y).padStart(4, "0");
+      return `${WATTERSON_COMIC_BASE}${ys}${p.mo}${p.d}.gif`;
+    }
+
+    /** Scale strip to full print width; unrotated → short band (landscape strip). */
+    function fitComicToStage(img, stage) {
+      const maxW = stage.clientWidth;
+      const w = img.naturalWidth;
+      const h = img.naturalHeight;
+      if (!w || !h) return;
+      if (!maxW) {
+        requestAnimationFrame(() => fitComicToStage(img, stage));
+        return;
+      }
+      const scale = maxW / w;
+      const sw = w * scale;
+      const sh = h * scale;
+      img.style.width = sw + "px";
+      img.style.height = sh + "px";
+      stage.style.height = sh + "px";
+    }
+
+    function appendComicBlock(root, forecastIsoDate) {
+      const block = el("div", "comic-block");
+      block.appendChild(el("div", "comic-title", "Calvin & Hobbes"));
+
+      const archiveUrl = wattersonStripGifUrl(forecastIsoDate);
+      const imgUrl =
+        (CALVIN_HOBBES_IMAGE_URL || "").trim() ||
+        comicImageUrlFromPage() ||
+        archiveUrl ||
+        COMIC_LOCAL_FALLBACK;
+
+      const stage = el("div", "comic-stage");
+
+      const img = document.createElement("img");
+      img.className = "comic-img";
+      img.alt = "Calvin and Hobbes";
+      img.decoding = "async";
+      img.src = imgUrl;
+
+      function showComicFallback() {
+        stage.removeAttribute("style");
+        stage.innerHTML = "";
+        const fb = el("div", "comic-fallback");
+        fb.appendChild(
+          document.createTextNode(
+            "Strip image failed to load. Archive is ~Dec 1985–Dec 1995 (same month/day, ",
+          ),
+        );
+        const off = el("span", null, String(COMIC_ARCHIVE_YEAR_OFFSET));
+        off.style.fontFamily = "ui-monospace, monospace";
+        off.style.fontSize = "10px";
+        fb.appendChild(off);
+        fb.appendChild(
+          document.createTextNode(
+            " years earlier). Override with ",
+          ),
+        );
+        const code = el("span", null, "?comic=");
+        code.style.fontFamily = "ui-monospace, monospace";
+        code.style.fontSize = "10px";
+        fb.appendChild(code);
+        fb.appendChild(document.createTextNode(", or place "));
+        const code2 = el("span", null, "comic.jpg");
+        code2.style.fontFamily = "ui-monospace, monospace";
+        code2.style.fontSize = "10px";
+        fb.appendChild(code2);
+        fb.appendChild(document.createTextNode(" next to this page. Tried "));
+        const a = document.createElement("a");
+        a.href = archiveUrl || imgUrl;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        a.textContent = "archive URL";
+        fb.appendChild(a);
+        fb.appendChild(document.createTextNode("."));
+        stage.appendChild(fb);
+      }
+
+      img.onload = () => fitComicToStage(img, stage);
+      if (img.complete) fitComicToStage(img, stage);
+      img.onerror = showComicFallback;
+      window.addEventListener("resize", () => {
+        if (img.naturalWidth) fitComicToStage(img, stage);
+      });
+      stage.appendChild(img);
+      block.appendChild(stage);
+
+      root.appendChild(block);
+    }
+
+    function wmoLabel(code) {
+      const c = Number(code);
+      if (c === 0) return "Clear";
+      if (c === 1) return "Mostly clear";
+      if (c === 2) return "Partly cloudy";
+      if (c === 3) return "Overcast";
+      if (c === 45 || c === 48) return "Fog";
+      if (c >= 51 && c <= 55) return "Drizzle";
+      if (c === 56 || c === 57) return "Freezing drizzle";
+      if (c === 61) return "Light rain";
+      if (c === 63) return "Rain";
+      if (c === 65) return "Heavy rain";
+      if (c === 66 || c === 67) return "Freezing rain";
+      if (c === 71) return "Light snow";
+      if (c === 73) return "Snow";
+      if (c === 75) return "Heavy snow";
+      if (c === 77) return "Snow grains";
+      if (c === 80) return "Rain showers";
+      if (c === 81 || c === 82) return "Heavy showers";
+      if (c === 85 || c === 86) return "Snow showers";
+      if (c === 95) return "Thunderstorm";
+      if (c === 96 || c === 99) return "Thunderstorm + hail";
+      return "Weather";
+    }
+
+    /** WMO codes (Open-Meteo) → [Weather Icons](https://erikflowers.github.io/weather-icons/) class names. */
+    function wmoToWiClass(code, isDay) {
+      const c = Number(code);
+      const d = (dayIcon, nightIcon) => (isDay ? dayIcon : nightIcon);
+
+      if (c === 0) return d("wi-day-sunny", "wi-night-clear");
+      if (c === 1) return d("wi-day-sunny", "wi-night-alt-partly-cloudy");
+      if (c === 2) return d("wi-day-cloudy", "wi-night-alt-cloudy");
+      if (c === 3) return "wi-cloudy";
+      if (c === 45 || c === 48) return d("wi-day-fog", "wi-night-fog");
+      if (c >= 51 && c <= 55) return d("wi-day-sprinkle", "wi-night-alt-sprinkle");
+      if (c === 56 || c === 57) return "wi-sleet";
+      if (c === 61) return d("wi-day-sprinkle", "wi-night-alt-sprinkle");
+      if (c === 63) return d("wi-day-rain", "wi-night-alt-rain");
+      if (c === 65) return d("wi-day-rain-wind", "wi-night-alt-rain-wind");
+      if (c === 66 || c === 67) return "wi-rain-mix";
+      if (c === 71) return d("wi-day-snow", "wi-night-alt-snow");
+      if (c === 73) return d("wi-day-snow", "wi-night-alt-snow");
+      if (c === 75) return "wi-snow-wind";
+      if (c === 77) return "wi-snow";
+      if (c === 80) return d("wi-day-showers", "wi-night-alt-showers");
+      if (c === 81 || c === 82) return d("wi-day-storm-showers", "wi-night-alt-storm-showers");
+      if (c === 85 || c === 86) return d("wi-day-snow", "wi-night-alt-snow");
+      if (c === 95) return d("wi-day-thunderstorm", "wi-night-alt-thunderstorm");
+      if (c === 96 || c === 99) {
+        return d("wi-day-snow-thunderstorm", "wi-night-alt-snow-thunderstorm");
+      }
+      return "wi-na";
+    }
+
+    function wiIcon(wiClass) {
+      const i = document.createElement("i");
+      i.className = "wi " + wiClass;
+      i.setAttribute("aria-hidden", "true");
+      return i;
+    }
+
+    function formatDay(isoDate) {
+      const d = new Date(isoDate + "T12:00:00");
+      return d.toLocaleDateString("en-US", { weekday: "short" });
+    }
+
+    function formatTodayLong(isoDate, timeZone) {
+      const d = new Date(isoDate + "T12:00:00");
+      return d.toLocaleDateString("en-US", {
+        weekday: "long",
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+        timeZone,
+      });
+    }
+
+    function el(tag, className, text) {
+      const n = document.createElement(tag);
+      if (className) n.className = className;
+      if (text != null) n.textContent = text;
+      return n;
+    }
+
+    async function main() {
+      const root = document.getElementById("root");
+
+      const geoUrl =
+        "https://geocoding-api.open-meteo.com/v1/search?name=" +
+        encodeURIComponent(ZIP) +
+        "&country=" +
+        encodeURIComponent(COUNTRY) +
+        "&count=1";
+
+      let lat = 42.3876;
+      let lon = -71.0995;
+      let place = "02145";
+
+      try {
+        const geoRes = await fetch(geoUrl);
+        const geo = await geoRes.json();
+        if (geo.results?.[0]) {
+          const r = geo.results[0];
+          lat = r.latitude;
+          lon = r.longitude;
+          place = [r.name, r.admin1].filter(Boolean).join(", ") || ZIP;
+        }
+      } catch (_) {
+        place = "02145 (fallback loc.)";
+      }
+
+      const params = new URLSearchParams({
+        latitude: String(lat),
+        longitude: String(lon),
+        current: "temperature_2m,weather_code,is_day",
+        daily: "weather_code,temperature_2m_max,temperature_2m_min",
+        timezone: "America/New_York",
+        forecast_days: "5",
+        temperature_unit: "fahrenheit",
+        wind_speed_unit: "mph",
+      });
+
+      const fcUrl = "https://api.open-meteo.com/v1/forecast?" + params.toString();
+      const fcRes = await fetch(fcUrl);
+      if (!fcRes.ok) throw new Error("Forecast request failed");
+      const data = await fcRes.json();
+
+      const cur = data.current;
+      const daily = data.daily;
+      if (!cur || !daily?.time?.length) throw new Error("Incomplete forecast data");
+
+      const todayLow = daily.temperature_2m_min[0];
+      const todayHigh = daily.temperature_2m_max[0];
+      const curCond = wmoLabel(cur.weather_code);
+      const curDay = cur.is_day === 1;
+      const curWi = wmoToWiClass(cur.weather_code, curDay);
+
+      root.innerHTML = "";
+
+      const head = el("div", "card-head");
+      head.appendChild(el("div", "location", place + " · " + ZIP));
+      head.appendChild(
+        el(
+          "div",
+          "today-date",
+          formatTodayLong(daily.time[0], "America/New_York"),
+        ),
+      );
+      root.appendChild(head);
+
+      const current = el("div", "current forecast-grid");
+
+      const main = el("div", "current-main");
+      const top = el("div", "current-top");
+      const nowWrap = el("div", "temp-now");
+      nowWrap.appendChild(document.createTextNode(Math.round(cur.temperature_2m)));
+      const deg = el("span", "deg", "°F");
+      nowWrap.appendChild(deg);
+      top.appendChild(nowWrap);
+      const condRow = el("div", "condition-row");
+      condRow.appendChild(wiIcon(curWi));
+      condRow.appendChild(el("div", "condition", curCond));
+      top.appendChild(condRow);
+      main.appendChild(top);
+      current.appendChild(main);
+
+      const hiLo = el("div", "hi-lo");
+      hiLo.appendChild(el("span", "hi-lo-label", "Low "));
+      hiLo.appendChild(el("span", "hi-lo-val", Math.round(todayLow) + "°"));
+      hiLo.appendChild(el("span", "hi-lo-sep", "·"));
+      hiLo.appendChild(el("span", "hi-lo-label", " High "));
+      hiLo.appendChild(el("span", "hi-lo-val", Math.round(todayHigh) + "°"));
+      current.appendChild(hiLo);
+
+      root.appendChild(current);
+
+      root.appendChild(el("div", "forecast-title", "5-day forecast"));
+
+      for (let i = 0; i < 5; i++) {
+        const row = el("div", "day-row forecast-grid");
+        const dayWi = wmoToWiClass(daily.weather_code[i], true);
+        row.appendChild(wiIcon(dayWi));
+        row.appendChild(el("div", "day-name", formatDay(daily.time[i])));
+        row.appendChild(el("div", "day-sky", wmoLabel(daily.weather_code[i])));
+        const temps = el("div", "day-temps");
+        temps.appendChild(
+          el("span", "day-hi", Math.round(daily.temperature_2m_max[i]) + "°"),
+        );
+        temps.appendChild(el("span", "day-slash", "/"));
+        temps.appendChild(
+          el("span", "day-lo", Math.round(daily.temperature_2m_min[i]) + "°"),
+        );
+        row.appendChild(temps);
+        root.appendChild(row);
+      }
+
+      appendComicBlock(root, daily.time[0]);
+    }
+
+    main().catch((err) => {
+      const root = document.getElementById("root");
+      root.innerHTML =
+        '<div class="status error">Could not load weather.</div>' +
+        '<div class="status">' +
+        (err && err.message ? err.message : "Unknown error") +
+        "</div>";
+    });
+  </script>
 </body>
 </html>
