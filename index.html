@@ -38,6 +38,8 @@
       --col-temps: 52px;
       --gutter-x: 6px;
       --gutter-y: 4px;
+      /* One step of vertical rhythm: rules ↔ kickers ↔ content (place, forecast strip, comic) */
+      --stack-gap: var(--s2);
     }
 
     * {
@@ -79,7 +81,7 @@
     .print-area {
       width: 272px;
       overflow: clip;
-      padding: 0;
+      padding: 6px 0 0;
       margin: 0;
       border: none;
     }
@@ -90,17 +92,8 @@
       border-bottom: 1px solid var(--rule-soft);
     }
 
-    .location {
-      font-size: 10px;
-      font-weight: 500;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--z-muted);
-      line-height: 1.25;
-    }
-
     .today-date {
-      margin-top: var(--s1);
+      margin-top: 0;
       font-size: 12px;
       font-weight: 400;
       font-variant-numeric: tabular-nums;
@@ -114,6 +107,10 @@
         var(--col-icon) var(--col-day) minmax(0, 1fr) var(--col-temps);
       column-gap: var(--gutter-x);
       row-gap: var(--gutter-y);
+    }
+
+    .current-section .current.forecast-grid {
+      margin-top: 0;
     }
 
     .current.forecast-grid {
@@ -224,75 +221,80 @@
       font-weight: 400;
     }
 
-    .forecast-title {
+    .section-kicker {
       font-size: 9px;
       font-weight: 500;
       text-transform: uppercase;
       letter-spacing: 0.14em;
       color: var(--z-quiet);
-      border-top: 1px solid var(--rule-soft);
-      padding-top: var(--s3);
+      text-align: left;
+      line-height: 1.25;
+    }
+
+    .place-title {
+      padding-top: var(--stack-gap);
       margin-bottom: var(--s2);
     }
 
-    .day-row {
-      align-items: center;
-      padding: var(--s2) 0;
+    .forecast-title {
+      border-top: 1px solid var(--rule-soft);
+      padding-top: var(--stack-gap);
+      margin-bottom: var(--stack-gap);
+    }
+
+    .forecast-strip {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      column-gap: var(--s1);
+      padding-bottom: var(--stack-gap);
       border-bottom: 1px solid var(--rule-soft);
-      font-size: 11px;
     }
 
-    .day-row .wi {
-      font-size: 16px;
+    .forecast-day {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      gap: var(--s1);
+      min-width: 0;
+      padding: 0 var(--s1);
+      border-radius: 0;
+    }
+
+    .forecast-day .day-name {
+      font-weight: 500;
+      font-size: 10px;
+      letter-spacing: 0.02em;
+      text-transform: capitalize;
+      color: var(--z-hero);
+      line-height: 1.2;
+    }
+
+    .forecast-day .wi {
+      font-size: 17px;
       line-height: 1;
-      color: var(--z-muted);
-      text-align: center;
-    }
-
-    .day-row:last-child {
-      border-bottom: none;
-      padding-bottom: 0;
-    }
-
-    .day-name {
-      font-weight: 500;
-      font-size: 10px;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      color: var(--z-body);
-    }
-
-    .day-sky {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      color: var(--z-muted);
-      font-weight: 400;
-      font-size: 10px;
-    }
-
-    .day-temps {
-      text-align: right;
-      font-variant-numeric: tabular-nums;
-      font-weight: 400;
-      font-size: 11px;
-      color: var(--z-quiet);
-    }
-
-    .day-temps .day-hi {
       color: var(--z-strong);
-      font-weight: 500;
     }
 
-    .day-temps .day-lo {
+    .forecast-day-temps {
+      display: flex;
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: baseline;
+      width: 100%;
+      font-variant-numeric: tabular-nums;
+      font-size: 10px;
+      line-height: 1.2;
+    }
+
+    .forecast-day-temps .day-hi {
+      color: var(--z-hero);
+      font-weight: 600;
+    }
+
+    .forecast-day-temps .day-lo {
       color: var(--z-muted);
       font-weight: 400;
-    }
-
-    .day-temps .day-slash {
-      color: var(--z-quiet);
-      font-weight: 400;
-      margin: 0 0.15em;
     }
 
     .status {
@@ -308,18 +310,13 @@
     }
 
     .comic-block {
-      margin: var(--s3) 0 0;
+      margin: var(--stack-gap) 0 0;
       padding: 0;
       border: none;
     }
 
     .comic-title {
-      font-size: 9px;
-      font-weight: 500;
-      text-transform: uppercase;
-      letter-spacing: 0.14em;
-      color: var(--z-quiet);
-      margin: 0 0 var(--s1);
+      margin: 0 0 var(--stack-gap);
     }
 
     .comic-stage {
@@ -420,7 +417,9 @@
 
     function appendComicBlock(root, forecastIsoDate) {
       const block = el("div", "comic-block");
-      block.appendChild(el("div", "comic-title", "Calvin & Hobbes"));
+      block.appendChild(
+        el("div", "section-kicker comic-title", "Calvin & Hobbes"),
+      );
 
       const archiveUrl = wattersonStripGifUrl(forecastIsoDate);
       const imgUrl =
@@ -605,7 +604,7 @@
         current: "temperature_2m,weather_code,is_day",
         daily: "weather_code,temperature_2m_max,temperature_2m_min",
         timezone: "America/New_York",
-        forecast_days: "5",
+        forecast_days: "6",
         temperature_unit: "fahrenheit",
         wind_speed_unit: "mph",
       });
@@ -628,7 +627,6 @@
       root.innerHTML = "";
 
       const head = el("div", "card-head");
-      head.appendChild(el("div", "location", place + " · " + ZIP));
       head.appendChild(
         el(
           "div",
@@ -637,6 +635,11 @@
         ),
       );
       root.appendChild(head);
+
+      const currentSection = el("div", "current-section");
+      currentSection.appendChild(
+        el("div", "section-kicker place-title", place + " · " + ZIP),
+      );
 
       const current = el("div", "current forecast-grid");
 
@@ -662,27 +665,30 @@
       hiLo.appendChild(el("span", "hi-lo-val", Math.round(todayHigh) + "°"));
       current.appendChild(hiLo);
 
-      root.appendChild(current);
+      currentSection.appendChild(current);
+      root.appendChild(currentSection);
 
-      root.appendChild(el("div", "forecast-title", "5-day forecast"));
+      root.appendChild(
+        el("div", "section-kicker forecast-title", "5-day forecast"),
+      );
 
-      for (let i = 0; i < 5; i++) {
-        const row = el("div", "day-row forecast-grid");
+      const strip = el("div", "forecast-strip");
+      for (let i = 1; i < 6; i++) {
+        const day = el("div", "forecast-day");
+        day.appendChild(el("div", "day-name", formatDay(daily.time[i])));
         const dayWi = wmoToWiClass(daily.weather_code[i], true);
-        row.appendChild(wiIcon(dayWi));
-        row.appendChild(el("div", "day-name", formatDay(daily.time[i])));
-        row.appendChild(el("div", "day-sky", wmoLabel(daily.weather_code[i])));
-        const temps = el("div", "day-temps");
+        day.appendChild(wiIcon(dayWi));
+        const temps = el("div", "forecast-day-temps");
         temps.appendChild(
           el("span", "day-hi", Math.round(daily.temperature_2m_max[i]) + "°"),
         );
-        temps.appendChild(el("span", "day-slash", "/"));
         temps.appendChild(
           el("span", "day-lo", Math.round(daily.temperature_2m_min[i]) + "°"),
         );
-        row.appendChild(temps);
-        root.appendChild(row);
+        day.appendChild(temps);
+        strip.appendChild(day);
       }
+      root.appendChild(strip);
 
       appendComicBlock(root, daily.time[0]);
     }
