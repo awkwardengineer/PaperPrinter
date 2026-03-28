@@ -40,6 +40,8 @@
       --gutter-y: 4px;
       /* One step of vertical rhythm: rules ↔ kickers ↔ content (place, forecast strip, comic) */
       --stack-gap: var(--s2);
+      --chart-line: var(--z-strong);
+      --chart-fill: color-mix(in srgb, var(--z-muted) 50%, var(--paper));
     }
 
     * {
@@ -242,6 +244,77 @@
       margin-bottom: var(--stack-gap);
     }
 
+    .hourly-title {
+      border-top: 1px solid var(--rule-soft);
+      padding-top: var(--stack-gap);
+      margin-bottom: 0;
+      line-height: 1.12;
+    }
+
+    .hourly-chart {
+      width: 100%;
+      margin: 0;
+      padding-bottom: var(--stack-gap);
+    }
+
+    .hourly-chart svg {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    .hourly-area {
+      fill: var(--chart-fill);
+    }
+
+    .hourly-line {
+      fill: none;
+      stroke: var(--chart-line);
+      stroke-width: 1.35;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .hourly-chart foreignObject .hourly-point-fo {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      width: 100%;
+      height: 100%;
+      box-sizing: border-box;
+      font-family: Inter, system-ui, sans-serif;
+    }
+
+    .hourly-point-fo .wi {
+      font-size: 11px;
+      line-height: 1;
+      color: var(--z-body);
+    }
+
+    .hourly-point-fo-temp {
+      margin-top: 2px;
+      font-size: 8px;
+      font-weight: 400;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.1;
+      color: var(--z-muted);
+    }
+
+    .hourly-times-row {
+      display: grid;
+      margin-top: 0;
+      font-size: 8px;
+      font-weight: 400;
+      font-variant-numeric: tabular-nums;
+      color: var(--z-muted);
+      line-height: 1.2;
+    }
+
+    .hourly-time-slot {
+      text-align: center;
+    }
+
     .forecast-strip {
       display: grid;
       grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -262,11 +335,11 @@
     }
 
     .forecast-day .day-name {
-      font-weight: 500;
+      font-weight: 400;
       font-size: 10px;
       letter-spacing: 0.02em;
       text-transform: capitalize;
-      color: var(--z-hero);
+      color: var(--z-strong);
       line-height: 1.2;
     }
 
@@ -564,6 +637,192 @@
       });
     }
 
+    /** Open-Meteo hourly `time` is local to `timezone`; slice is `YYYY-MM-DDTHH`. */
+    function formatHourShort(iso) {
+      const h = Number(iso.slice(11, 13));
+      const h12 = h % 12 || 12;
+      const ap = h < 12 ? "AM" : "PM";
+      return `${h12} ${ap}`;
+    }
+
+    function localHourIsDay(iso) {
+      const h = Number(iso.slice(11, 13));
+      return h >= 7 && h < 19;
+    }
+
+    function sliceHourlyWindow(hourly, currentTimeIso) {
+      const times = hourly?.time;
+      if (!times?.length) return null;
+      let start = 0;
+      if (currentTimeIso && !Number.isNaN(Date.parse(currentTimeIso))) {
+        const curHourStart = currentTimeIso.slice(0, 13) + ":00";
+        const idx = times.findIndex((t) => t >= curHourStart);
+        start = idx < 0 ? Math.max(0, times.length - 24) : idx;
+      }
+      const end = Math.min(start + 24, times.length);
+      if (end - start < 8) return null;
+      return {
+        times: times.slice(start, end),
+        temps: hourly.temperature_2m.slice(start, end),
+        codes: hourly.weather_code.slice(start, end),
+      };
+    }
+
+    /** Piecewise-linear sample at `xt` using knots `xs` (monotone) and values `vals`. */
+    function linearSample(xt, xs, vals) {
+      const m = xs.length;
+      if (m === 0) return NaN;
+      if (m === 1) return vals[0];
+      if (xt <= xs[0]) return vals[0];
+      if (xt >= xs[m - 1]) return vals[m - 1];
+      for (let j = 0; j < m - 1; j++) {
+        if (xt >= xs[j] && xt <= xs[j + 1]) {
+          const den = xs[j + 1] - xs[j];
+          const u = den === 0 ? 0 : (xt - xs[j]) / den;
+          return vals[j] + u * (vals[j + 1] - vals[j]);
+        }
+      }
+      return vals[m - 1];
+    }
+
+    function appendHourlyPointOverlay(svg, x, yVertex, wiClass, tempVal, foW, foH, gapPx) {
+      const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      g.setAttribute(
+        "transform",
+        "translate(" + x.toFixed(2) + "," + yVertex.toFixed(2) + ")",
+      );
+
+      const fo = document.createElementNS("http://www.w3.org/2000/svg", "foreignObject");
+      fo.setAttribute("x", String(-foW / 2));
+      fo.setAttribute("y", String(-(foH + gapPx)));
+      fo.setAttribute("width", String(foW));
+      fo.setAttribute("height", String(foH));
+
+      const div = document.createElement("div");
+      div.setAttribute("xmlns", "http://www.w3.org/1999/xhtml");
+      div.className = "hourly-point-fo";
+      div.appendChild(wiIcon(wiClass));
+      const span = document.createElement("span");
+      span.className = "hourly-point-fo-temp";
+      span.textContent = String(Math.round(tempVal));
+      div.appendChild(span);
+
+      fo.appendChild(div);
+      g.appendChild(fo);
+      svg.appendChild(g);
+    }
+
+    function appendHourlySection(root, slice) {
+      const n = slice.temps.length;
+      const W = 256;
+      const padX = 2;
+      const foW = 26;
+      const foH = 28;
+      const gapPx = 2;
+      const stackPx = foH + gapPx;
+      /* Top of temp scale: room for foreignObject stack above the warmest vertex only (no extra slack). */
+      const plotTop = stackPx;
+      const plotInnerH = 32;
+      const plotBot = plotTop + plotInnerH;
+      const plotH = plotInnerH;
+      /* One --s1 band below plot baseline before time row (matches rhythm tokens) */
+      const viewHFull = plotBot + 4;
+
+      const temps = slice.temps.map((t) => Number(t));
+      let tMin = Math.min(...temps);
+      let tMax = Math.max(...temps);
+      if (tMax - tMin < 3) {
+        const m = (tMin + tMax) / 2;
+        tMin = m - 1.5;
+        tMax = m + 1.5;
+      }
+      const innerW = W - 2 * padX;
+      const xAt = (i) =>
+        n <= 1 ? W / 2 : padX + ((i + 0.5) / n) * innerW;
+      const yAt = (t) => plotTop + ((tMax - t) / (tMax - tMin)) * plotH;
+
+      const pts = [];
+      for (let i = 0; i < n; i++) {
+        const x = xAt(i);
+        const y = yAt(temps[i]);
+        pts.push(`${x.toFixed(2)},${y.toFixed(2)}`);
+      }
+      const x0 = xAt(0);
+      const xL = xAt(n - 1);
+      const dArea =
+        `M ${x0.toFixed(2)},${plotBot} L ` +
+        pts.join(" L ") +
+        ` L ${xL.toFixed(2)},${plotBot} Z`;
+
+      const xs = temps.map((_, i) => xAt(i));
+      const ys = temps.map((t) => yAt(t));
+
+      let minOverlayTop = Infinity;
+      for (let k = 0; k < n; k += 3) {
+        const span = Math.min(3, n - k);
+        const xCenter = (xAt(k) + xAt(k + span - 1)) / 2;
+        const yOnLine = linearSample(xCenter, xs, ys);
+        minOverlayTop = Math.min(minOverlayTop, yOnLine - stackPx);
+      }
+      /* Trim empty SVG band above overlays (cold start of day leaves a tall white wedge). */
+      const yCrop = Math.max(0, minOverlayTop - 4);
+      const viewH = viewHFull - yCrop;
+
+      const block = el("div", "hourly-block");
+      block.appendChild(
+        el("div", "section-kicker hourly-title", "Hour by hour"),
+      );
+      const wrap = el("div", "hourly-chart");
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.setAttribute("viewBox", "0 " + yCrop + " " + W + " " + viewH);
+      svg.setAttribute("role", "img");
+      svg.setAttribute("aria-label", "Hourly temperature");
+      svg.innerHTML =
+        '<path d="' +
+        dArea +
+        '" class="hourly-area"></path><polyline class="hourly-line" points="' +
+        pts.join(" ") +
+        '"></polyline>';
+
+      for (let k = 0; k < n; k += 3) {
+        const span = Math.min(3, n - k);
+        const xCenter = (xAt(k) + xAt(k + span - 1)) / 2;
+        const yOnLine = linearSample(xCenter, xs, ys);
+        const tempShown = Math.round(linearSample(xCenter, xs, temps));
+        const midIdx = k + Math.floor((span - 1) / 2);
+        const day = localHourIsDay(slice.times[midIdx]);
+        appendHourlyPointOverlay(
+          svg,
+          xCenter,
+          yOnLine,
+          wmoToWiClass(slice.codes[midIdx], day),
+          tempShown,
+          foW,
+          foH,
+          gapPx,
+        );
+      }
+
+      wrap.appendChild(svg);
+
+      const gridCols = `repeat(${n}, minmax(0,1fr))`;
+      const timesRow = el("div", "hourly-times-row");
+      timesRow.style.gridTemplateColumns = gridCols;
+      for (let k = 0; k < n; k += 3) {
+        const span = Math.min(3, n - k);
+        const timeSlot = el(
+          "span",
+          "hourly-time-slot",
+          formatHourShort(slice.times[k]),
+        );
+        timeSlot.style.gridColumn = `${k + 1} / span ${span}`;
+        timesRow.appendChild(timeSlot);
+      }
+      wrap.appendChild(timesRow);
+      block.appendChild(wrap);
+      root.appendChild(block);
+    }
+
     function el(tag, className, text) {
       const n = document.createElement(tag);
       if (className) n.className = className;
@@ -602,6 +861,7 @@
         latitude: String(lat),
         longitude: String(lon),
         current: "temperature_2m,weather_code,is_day",
+        hourly: "temperature_2m,weather_code",
         daily: "weather_code,temperature_2m_max,temperature_2m_min",
         timezone: "America/New_York",
         forecast_days: "6",
@@ -667,6 +927,12 @@
 
       currentSection.appendChild(current);
       root.appendChild(currentSection);
+
+      const hourlySlice = sliceHourlyWindow(
+        data.hourly,
+        cur.time || data.hourly?.time?.[0] || "",
+      );
+      if (hourlySlice) appendHourlySection(root, hourlySlice);
 
       root.appendChild(
         el("div", "section-kicker forecast-title", "5-day forecast"),
