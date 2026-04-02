@@ -7,7 +7,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "pdf": "node render-pdf.mjs",
     "pdf:live": "PAPER_HTML_URL=http://127.0.0.1:5500/index.html node render-pdf.mjs",
-    "print": "node render-pdf.mjs --print"
+    "print": "node render-pdf.mjs --print",
+    "print:meal": "node render-pdf.mjs print.html --print"
   },
   "repository": {
     "type": "git",

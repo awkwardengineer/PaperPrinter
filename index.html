@@ -418,6 +418,35 @@
       color: var(--z-strong);
       font-weight: 500;
     }
+
+    .quote-block {
+      margin: var(--stack-gap) 0 0;
+      padding: 0;
+    }
+
+    .quote-title {
+      border-top: 1px solid var(--rule-soft);
+      padding-top: var(--stack-gap);
+      margin-bottom: var(--s1);
+    }
+
+    .quote-body {
+      font-size: 11px;
+      font-weight: 400;
+      line-height: 1.45;
+      color: var(--z-body);
+      letter-spacing: 0.01em;
+      text-transform: none;
+    }
+
+    .quote-author {
+      margin-top: var(--s2);
+      font-size: 9px;
+      font-weight: 400;
+      color: var(--z-muted);
+      letter-spacing: 0.02em;
+      text-transform: none;
+    }
   </style>
 </head>
 <body>
@@ -830,6 +859,67 @@
       return n;
     }
 
+    /**
+     * DummyJSON random quote: https://dummyjson.com/docs/quotes — `{ quote, author }`.
+     * Some entries are title case (every letter-word starts with A–Z); normalize to sentence case.
+     */
+    function quoteLetterWords(s) {
+      return s.match(/[A-Za-z]+(?:'[A-Za-z]+)?/g) || [];
+    }
+
+    function isLikelyEveryWordCapitalized(s) {
+      const words = quoteLetterWords(s);
+      if (words.length < 2) return false;
+      return words.every((w) => /^[A-Z]/.test(w));
+    }
+
+    function toSentenceCase(s) {
+      let r = s.trim().toLowerCase();
+      r = r.replace(/^([^a-z]*)([a-z])/, (_, pre, ch) => pre + ch.toUpperCase());
+      r = r.replace(/([.!?]+["']*\s+)([a-z])/g, (_, a, b) => a + b.toUpperCase());
+      return r;
+    }
+
+    function normalizeDummyJsonQuoteText(q) {
+      const t = String(q).trim();
+      if (!t) return t;
+      if (isLikelyEveryWordCapitalized(t)) return toSentenceCase(t);
+      return t;
+    }
+
+    function mountQuoteBlock(root, row) {
+      if (!row || typeof row.q !== "string" || !row.q.trim()) return;
+      const body = normalizeDummyJsonQuoteText(row.q);
+      const block = el("div", "quote-block");
+      block.appendChild(
+        el("div", "section-kicker quote-title", "Quote"),
+      );
+      block.appendChild(el("div", "quote-body", body));
+      if (row.a && String(row.a).trim()) {
+        block.appendChild(
+          el("div", "quote-author", "— " + String(row.a).trim()),
+        );
+      }
+      root.appendChild(block);
+    }
+
+    async function appendQuoteBlock(root) {
+      try {
+        const res = await fetch("https://dummyjson.com/quotes/random");
+        if (res.ok) {
+          const d = await res.json();
+          if (d.quote && String(d.quote).trim()) {
+            mountQuoteBlock(root, {
+              q: String(d.quote).trim(),
+              a: d.author ? String(d.author).trim() : "",
+            });
+          }
+        }
+      } catch (_) {
+        /* Omit section */
+      }
+    }
+
     async function main() {
       const root = document.getElementById("root");
 
@@ -957,6 +1047,7 @@
       root.appendChild(strip);
 
       appendComicBlock(root, daily.time[0]);
+      await appendQuoteBlock(root);
     }
 
     main().catch((err) => {

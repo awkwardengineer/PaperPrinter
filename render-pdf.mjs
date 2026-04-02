@@ -6,8 +6,13 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const htmlPath = path.join(__dirname, "index.html");
-const outPath = path.join(__dirname, "index.pdf");
+const argv = process.argv.slice(2).filter((a) => a !== "--print");
+const htmlFile = argv.find((a) => /\.html$/i.test(a)) ?? "index.html";
+const htmlPath = path.join(__dirname, htmlFile);
+const outPath = path.join(
+  __dirname,
+  `${path.basename(htmlFile, path.extname(htmlFile))}.pdf`,
+);
 
 /** e.g. http://127.0.0.1:5500/index.html — Live Server must be running */
 const paperHtmlUrlBase = (process.env.PAPER_HTML_URL || "").trim();
