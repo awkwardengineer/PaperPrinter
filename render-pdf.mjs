@@ -21,10 +21,12 @@ const paperHtmlUrlBase = (process.env.PAPER_HTML_URL || "").trim();
 const PX_PER_IN = 96;
 
 /**
- * Fixed page width to match lw4xl.ppd XX80mm entry: PaperDimension width 223.20 pt
- * = 223.20/72 in = 3.1 in = 78.74 mm.
+ * Physical tape width (matches `lp -o media=Custom.WxH` from customMediaFromPageSize).
+ * Wider stock than legacy XX80mm (223.20 pt ≈ 78.74 mm); 108 mm ≈ 306.14 pt.
  */
-const PAGE_WIDTH = "78.74mm";
+const PAGE_WIDTH = "108mm";
+const PAGE_WIDTH_MM = Number(String(PAGE_WIDTH).replace(/mm\s*$/i, "").trim());
+const PAGE_WIDTH_PT = (PAGE_WIDTH_MM / 25.4) * 72;
 
 /** Same geometry as `page.pdf()` → `lp -o media=Custom.WxH` (PostScript points, 72 pt = 1 in). */
 function customMediaFromPageSize(widthCss, heightPx, pxPerIn) {
@@ -71,7 +73,7 @@ const heightPx = await page.evaluate(() => {
 const heightIn = heightPx / PX_PER_IN;
 
 console.log(
-  `Page width: ${PAGE_WIDTH} (matches PPD ~223.2 pt). Content height: ${heightPx} px → ${heightIn.toFixed(4)} in (${PX_PER_IN} px = 1 in)`,
+  `Page width: ${PAGE_WIDTH} (~${PAGE_WIDTH_PT.toFixed(2)} pt). Content height: ${heightPx} px → ${heightIn.toFixed(4)} in (${PX_PER_IN} px = 1 in)`,
 );
 
 await page.pdf({

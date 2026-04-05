@@ -81,7 +81,7 @@
     }
 
     .print-area {
-      width: 272px;
+      width: 388px;
       overflow: clip;
       padding: 6px 0 0;
       margin: 0;
@@ -352,8 +352,9 @@
     .forecast-day-temps {
       display: flex;
       flex-direction: row;
-      justify-content: space-between;
+      justify-content: center;
       align-items: baseline;
+      gap: var(--s1);
       width: 100%;
       font-variant-numeric: tabular-nums;
       font-size: 10px;
@@ -363,6 +364,11 @@
     .forecast-day-temps .day-hi {
       color: var(--z-hero);
       font-weight: 600;
+    }
+
+    .forecast-day-temps .day-temp-sep {
+      color: var(--z-quiet);
+      font-weight: 400;
     }
 
     .forecast-day-temps .day-lo {
@@ -1038,6 +1044,7 @@
         temps.appendChild(
           el("span", "day-hi", Math.round(daily.temperature_2m_max[i]) + "°"),
         );
+        temps.appendChild(el("span", "day-temp-sep", "/"));
         temps.appendChild(
           el("span", "day-lo", Math.round(daily.temperature_2m_min[i]) + "°"),
         );
