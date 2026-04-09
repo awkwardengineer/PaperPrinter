@@ -27,6 +27,8 @@
       --z-faint: #767676;
       --rule-soft: #b8b8b8;
       --rule-mid: #8a8a8a;
+      /* One token for every hairline (horizontal + vertical) */
+      --hairline-rule: 1px solid var(--rule-soft);
       /* Rhythm: multiples of 4px only */
       --s1: 4px;
       --s2: 8px;
@@ -91,7 +93,7 @@
     .card-head {
       padding-bottom: var(--s3);
       margin-bottom: 0;
-      border-bottom: 1px solid var(--rule-soft);
+      border-bottom: var(--hairline-rule);
     }
 
     .today-date {
@@ -142,6 +144,11 @@
     }
 
     .temp-now {
+      display: inline-flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
       flex-shrink: 0;
       font-size: 30px;
       font-weight: 500;
@@ -152,15 +159,12 @@
     }
 
     .temp-now .deg {
-      display: inline-block;
-      margin-left: 2px;
+      flex-shrink: 0;
       font-size: 13px;
       font-weight: 400;
       letter-spacing: 0.02em;
+      line-height: 1;
       color: var(--z-muted);
-      vertical-align: super;
-      position: relative;
-      top: 0.08em;
       font-variation-settings: "opsz" 14;
     }
 
@@ -174,7 +178,7 @@
 
     .current .condition-row .wi {
       flex-shrink: 0;
-      font-size: 26px;
+      font-size: 18px;
       line-height: 1;
       color: var(--z-body);
     }
@@ -235,17 +239,40 @@
 
     .place-title {
       padding-top: var(--stack-gap);
-      margin-bottom: var(--s2);
+      margin-bottom: 0;
     }
 
-    .forecast-title {
-      border-top: 1px solid var(--rule-soft);
-      padding-top: var(--stack-gap);
-      margin-bottom: var(--stack-gap);
+    /* Current + multi-day forecast in one row */
+    .current-weather-row {
+      display: flex;
+      flex-direction: row;
+      align-items: stretch;
+      gap: var(--s2);
+      padding: var(--s4) 0 var(--stack-gap);
+    }
+
+    .current-weather-row .current.forecast-grid {
+      flex: 0 1 auto;
+      max-width: 46%;
+      min-width: 0;
+      margin-top: 0;
+      padding: 0;
+    }
+
+    .forecast-aside {
+      flex: 1 1 0;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: var(--s1);
+      justify-content: center;
+      border-left: var(--hairline-rule);
+      padding-left: var(--s2);
     }
 
     .hourly-title {
-      border-top: 1px solid var(--rule-soft);
+      border-top: var(--hairline-rule);
       padding-top: var(--stack-gap);
       margin-bottom: 0;
       line-height: 1.12;
@@ -320,7 +347,7 @@
       grid-template-columns: repeat(5, minmax(0, 1fr));
       column-gap: var(--s1);
       padding-bottom: var(--stack-gap);
-      border-bottom: 1px solid var(--rule-soft);
+      border-bottom: var(--hairline-rule);
     }
 
     .forecast-day {
@@ -374,6 +401,32 @@
     .forecast-day-temps .day-lo {
       color: var(--z-muted);
       font-weight: 400;
+    }
+
+    /* 5-day strip beside current: wins cascade over .forecast-strip */
+    .forecast-strip.forecast-strip--aside {
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      column-gap: 2px;
+      padding-bottom: 0;
+      border-bottom: none;
+    }
+
+    .forecast-strip.forecast-strip--aside .forecast-day {
+      padding: 0 1px;
+      gap: var(--s1);
+    }
+
+    .forecast-strip.forecast-strip--aside .forecast-day .day-name {
+      font-size: 9px;
+    }
+
+    .forecast-strip.forecast-strip--aside .forecast-day .wi {
+      font-size: 16px;
+    }
+
+    .forecast-strip.forecast-strip--aside .forecast-day-temps {
+      font-size: 8px;
+      gap: 1px;
     }
 
     .status {
@@ -431,7 +484,7 @@
     }
 
     .quote-title {
-      border-top: 1px solid var(--rule-soft);
+      border-top: var(--hairline-rule);
       padding-top: var(--stack-gap);
       margin-bottom: var(--s1);
     }
@@ -997,14 +1050,15 @@
         el("div", "section-kicker place-title", place + " · " + ZIP),
       );
 
+      const row = el("div", "current-weather-row");
+
       const current = el("div", "current forecast-grid");
 
       const main = el("div", "current-main");
       const top = el("div", "current-top");
       const nowWrap = el("div", "temp-now");
       nowWrap.appendChild(document.createTextNode(Math.round(cur.temperature_2m)));
-      const deg = el("span", "deg", "°F");
-      nowWrap.appendChild(deg);
+      nowWrap.appendChild(el("span", "deg", "°F"));
       top.appendChild(nowWrap);
       const condRow = el("div", "condition-row");
       condRow.appendChild(wiIcon(curWi));
@@ -1016,28 +1070,24 @@
       const hiLo = el("div", "hi-lo");
       hiLo.appendChild(el("span", "hi-lo-label", "Low "));
       hiLo.appendChild(el("span", "hi-lo-val", Math.round(todayLow) + "°"));
-      hiLo.appendChild(el("span", "hi-lo-sep", "·"));
+      hiLo.appendChild(el("span", "hi-lo-sep", "/"));
       hiLo.appendChild(el("span", "hi-lo-label", " High "));
       hiLo.appendChild(el("span", "hi-lo-val", Math.round(todayHigh) + "°"));
       current.appendChild(hiLo);
 
-      currentSection.appendChild(current);
-      root.appendChild(currentSection);
+      row.appendChild(current);
 
-      const hourlySlice = sliceHourlyWindow(
-        data.hourly,
-        cur.time || data.hourly?.time?.[0] || "",
-      );
-      if (hourlySlice) appendHourlySection(root, hourlySlice);
-
-      root.appendChild(
-        el("div", "section-kicker forecast-title", "5-day forecast"),
-      );
-
-      const strip = el("div", "forecast-strip");
+      const aside = el("div", "forecast-aside");
+      const strip = el("div", "forecast-strip forecast-strip--aside");
       for (let i = 1; i < 6; i++) {
         const day = el("div", "forecast-day");
-        day.appendChild(el("div", "day-name", formatDay(daily.time[i])));
+        day.appendChild(
+          el(
+            "div",
+            "day-name",
+            i === 1 ? "Tomorrow" : formatDay(daily.time[i]),
+          ),
+        );
         const dayWi = wmoToWiClass(daily.weather_code[i], true);
         day.appendChild(wiIcon(dayWi));
         const temps = el("div", "forecast-day-temps");
@@ -1051,7 +1101,17 @@
         day.appendChild(temps);
         strip.appendChild(day);
       }
-      root.appendChild(strip);
+      aside.appendChild(strip);
+      row.appendChild(aside);
+
+      currentSection.appendChild(row);
+      root.appendChild(currentSection);
+
+      const hourlySlice = sliceHourlyWindow(
+        data.hourly,
+        cur.time || data.hourly?.time?.[0] || "",
+      );
+      if (hourlySlice) appendHourlySection(root, hourlySlice);
 
       appendComicBlock(root, daily.time[0]);
       await appendQuoteBlock(root);

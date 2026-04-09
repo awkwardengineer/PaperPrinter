@@ -1,2 +1,7 @@
 node_modules/
 comic.jpg
+
+# Generated / local print outputs
+index.pdf
+cron-print.log
+print.pdf
