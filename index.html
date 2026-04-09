@@ -919,7 +919,7 @@
     }
 
     /**
-     * DummyJSON random quote: https://dummyjson.com/docs/quotes — `{ quote, author }`.
+     * Quotable random quote: http://api.quotable.io — one `{ content, author }` or `[that]`.
      * Some entries are title case (every letter-word starts with A–Z); normalize to sentence case.
      */
     function quoteLetterWords(s) {
@@ -964,12 +964,15 @@
 
     async function appendQuoteBlock(root) {
       try {
-        const res = await fetch("https://dummyjson.com/quotes/random");
+        const res = await fetch(
+          "http://api.quotable.io/quotes/random?tags=Inspirational|Success",
+        );
         if (res.ok) {
-          const d = await res.json();
-          if (d.quote && String(d.quote).trim()) {
+          const raw = await res.json();
+          const d = Array.isArray(raw) ? raw[0] : raw;
+          if (d && d.content && String(d.content).trim()) {
             mountQuoteBlock(root, {
-              q: String(d.quote).trim(),
+              q: String(d.content).trim(),
               a: d.author ? String(d.author).trim() : "",
             });
           }
